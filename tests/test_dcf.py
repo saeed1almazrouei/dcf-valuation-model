@@ -139,3 +139,16 @@ def test_projection_from_lists_length_mismatch_raises():
     with _pt.raises(ValueError):
         projection_from_lists(ebit=[100, 110], dna=[10], capex=[20, 22],
                               delta_nwc=[5, 6], tax_rate=0.25)
+def test_exit_metric_ebit_below_ebitda():
+    df = build_projection(BASE)
+    ebitda = enterprise_value(df, 0.10, "exit", exit_multiple=8).enterprise_value
+    ebit   = enterprise_value(df, 0.10, "exit", exit_multiple=8, exit_metric="ebit").enterprise_value
+    assert ebit < ebitda   # EBIT < EBITDA, so a lower terminal value
+
+def test_implied_multiple_reproduces_gordon():
+    from dcf.valuation import implied_exit_multiple
+    df = build_projection(BASE)
+    m = implied_exit_multiple(df, 0.10, 0.02)
+    g = enterprise_value(df, 0.10, "gordon", terminal_growth=0.02).enterprise_value
+    e = enterprise_value(df, 0.10, "exit", exit_multiple=m).enterprise_value
+    assert e == pytest.approx(g)   # the implied multiple round-trips exactly
