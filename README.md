@@ -12,6 +12,9 @@ the disagreement between the two terminal methods, respond across a range of WAC
 and terminal-growth assumptions. The core logic lives in an importable, tested
 `dcf` package. The notebook is only a walkthrough.
 
+For a full API reference of every function, its inputs, and the available options
+(such as the `exit_metric` choices), see [docs/REFERENCE.md](docs/REFERENCE.md).
+
 ## What it computes
 
 1. **FCFF** from statement inputs, per period:
