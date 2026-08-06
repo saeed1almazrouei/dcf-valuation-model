@@ -5,31 +5,18 @@ from dcf.valuation import pv_explicit, enterprise_value
 from dcf.terminal import gordon_growth_tv
 
 def fcfe_direct(net_income, dna, capex, delta_nwc, net_borrowing):
-    """FCFE from the bottom up.
-
-    Net income already reflects after-tax interest, so no separate tax term.
-    Net borrowing is new debt raised minus debt repaid: positive = cash IN to
-    equity (the firm borrowed), negative = cash OUT (the firm paid debt down).
-    """
+     """FCFE bottom-up: net_income + D&A - Capex - dNWC + net_borrowing."""
     return net_income + dna - capex - delta_nwc + net_borrowing
 
 
 def fcfe_from_fcff(fcff_value, interest, tax_rate, net_borrowing):
-    """FCFE built off FCFF: remove after-tax interest paid to debt, add net borrowing.
-
-    Algebraically identical to fcfe_direct when inputs are consistent, i.e.
-    net_income == (ebit - interest) * (1 - tax_rate).
-    """
+    """FCFE from FCFF: fcff - interest*(1-tax) + net_borrowing (equals fcfe_direct)."""
     return fcff_value - interest * (1 - tax_rate) + net_borrowing
 
 
 
 def build_fcfe_projection(a, debt_pct, cost_of_debt):
-    """Extend the FCFF projection with a constant-debt-ratio schedule and FCFE.
-
-    Debt is held at `debt_pct` of revenue, so the firm borrows as it grows.
-    Interest accrues on the opening (prior-year) debt balance.
-    """
+    """Add a constant-debt-ratio schedule and an fcfe column to the FCFF projection."""
     df = build_projection(a).copy()
 
     prev_revenue = df["revenue"].shift(1)
@@ -60,11 +47,7 @@ def equity_value_fcfe(df, cost_of_equity, terminal_growth):
 
 def reconcile_equity(a, wacc, cost_of_equity, cost_of_debt, terminal_growth,
                      debt_pct, cash=0.0):
-    """Equity value two ways, and the gap between them.
-
-    direct   : discount FCFE at the cost of equity
-    indirect : enterprise value (FCFF @ WACC) minus net debt
-    """
+    """Equity value direct (FCFE) vs indirect (EV - net debt). Returns a dict with the gap."""
     ev = enterprise_value(build_projection(a), wacc, "gordon",
                           terminal_growth=terminal_growth).enterprise_value
 

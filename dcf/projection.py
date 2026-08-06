@@ -17,18 +17,7 @@ class Assumptions:
 
     @classmethod
     def from_base_year(cls, revenue, ebit, dna, capex, nwc, tax_rate, growth, years=10):
-        """Build assumptions from base-year dollar figures off the statements.
-
-        Each ratio is derived by dividing the base-year dollar amount by base-year
-        revenue, then held constant across the projection:
-            ebit_margin = ebit  / revenue
-            dna_pct     = dna    / revenue
-            capex_pct   = capex  / revenue
-            nwc_pct     = nwc    / revenue      # nwc is the LEVEL, not the change
-
-        The projection derives each year's ΔNWC from nwc_pct × (change in revenue),
-        so you never supply a change directly.
-        """
+        """Build from base-year dollar figures (nwc is the LEVEL). Ratios = amount / revenue."""
         return cls(
             base_revenue=revenue,
             growth=growth,
@@ -42,11 +31,7 @@ class Assumptions:
 
 
 def _growth_path(growth, years):
-    """Turn `growth` into a list of length `years`.
-
-    Accepts a single number (applied every year) or a list of per-year rates.
-    Raises if a list is passed with the wrong length, so a mismatch fails loudly.
-    """
+    """Expand `growth` to a list of length `years` (raises on a wrong-length list)."""
     if isinstance(growth, (int, float)):
         return [float(growth)] * years
     path = list(growth)
@@ -56,11 +41,7 @@ def _growth_path(growth, years):
 
 
 def build_projection(a: Assumptions) -> pd.DataFrame:
-    """Project `a.years` of financials and FCFF from a set of assumptions.
-
-    Everything is driven off revenue. ΔNWC is tied to the change in revenue,
-    so a zero-growth year produces zero ΔNWC.
-    """
+    """Project `a.years` of financials and FCFF, driving every line off revenue."""
     growth = _growth_path(a.growth, a.years)
     prev_revenue = a.base_revenue          # carry-forward starts at the base year
     rows = []
@@ -87,17 +68,7 @@ def build_projection(a: Assumptions) -> pd.DataFrame:
 
     return pd.DataFrame(rows).set_index("year")
 def projection_from_lists(ebit, dna, capex, delta_nwc, tax_rate, revenue=None):
-    """Build a projection table from your OWN per-year forecasts.
-
-    Instead of generating ten years from constant growth/margin assumptions,
-    supply the numbers yourself. ebit, dna, capex, delta_nwc are each a list with
-    one entry per projected year (any length). tax_rate is a scalar (same every
-    year) or a per-year list. revenue is optional — the exit multiple builds
-    EBITDA from ebit + dna, so revenue isn't required for valuation.
-
-    Returns the same shape build_projection() produces, so it drops straight into
-    enterprise_value(), ev_grid(), divergence_grid(), etc.
-    """
+    """Build a projection table from your own per-year forecasts (same shape as build_projection)."""
     n = len(ebit)
     for name, seq in {"dna": dna, "capex": capex, "delta_nwc": delta_nwc}.items():
         if len(seq) != n:
