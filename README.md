@@ -81,6 +81,30 @@ print(exit_.enterprise_value,  exit_.tv_share)    # ~3209, ~0.62
 dna_pct, capex_pct, nwc_pct)` ratio constructor still exists if you'd rather pass
 ratios directly.)
 
+**Bring your own projection.** If you've already forecast the ten years yourself
+— in a spreadsheet or by hand — skip the constant-growth engine and feed the
+numbers straight in with `projection_from_lists`. It runs each year through the
+same `fcff()` and returns an identical table, so `enterprise_value`, the grids,
+and the heatmaps all work unchanged:
+
+```python
+from dcf.projection import projection_from_lists
+
+df = projection_from_lists(
+    ebit      =[220, 245, 265, 280, 290, 300, 308, 315, 320, 324],
+    dna       =[55, 60, 66, 70, 73, 75, 77, 79, 80, 81],
+    capex     =[77, 85, 93, 100, 104, 107, 110, 112, 114, 115],
+    delta_nwc =[10, 11, 12, 13, 12, 10, 9, 8, 7, 6],
+    tax_rate  =0.25,        # scalar, or a per-year list
+)
+v = enterprise_value(df, wacc=0.10, method="gordon", terminal_growth=0.02)
+```
+
+Both terminal methods work because `ebit` and `dna` are present (the exit
+multiple reconstructs EBITDA from them). The FCFE reconciliation still uses the
+assumptions-based path, since it needs a debt schedule a bare FCFF forecast
+doesn't carry.
+
 **Anchoring WACC.** WACC is an input you sweep, not something the model derives
 internally (see Limitations). To pick a defensible *center* for the sweep,
 compute a point estimate from CAPM:
@@ -126,7 +150,7 @@ print(r["equity_direct"], r["equity_indirect"], r["gap_pct"])
 ```
 dcf/
   fcff.py         # single-period FCFF derivation (pure function)
-  projection.py   # Assumptions dataclass + ten-year projection engine
+  projection.py   # Assumptions dataclass, projection engine, bring-your-own path
   valuation.py    # CAPM, WACC, discounting, enterprise-value assembly
   terminal.py     # Gordon-growth and exit-multiple terminal values
   sensitivity.py  # WACC × g grids: enterprise value and method divergence
@@ -215,5 +239,6 @@ pytest -q
 The suite pins the FCFF hand-calculation and sign conventions, the zero-growth
 and compounding invariants, the discount-at-zero identity, the Gordon numerator
 and its `g < WACC` guard, the WACC endpoints, the enterprise-value breakdown, the
-divergence sign flip, the equivalence of the two FCFE derivations, and the exact
-FCFE reconciliation under no leverage.
+divergence sign flip, the bring-your-own `projection_from_lists` path, the
+equivalence of the two FCFE derivations, and the exact FCFE reconciliation under
+no leverage.

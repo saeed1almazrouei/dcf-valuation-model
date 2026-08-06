@@ -125,3 +125,17 @@ def test_fcfe_reconciles_exactly_with_no_debt():
     assert r["net_debt"] == pytest.approx(0.0)
     assert r["equity_direct"] == pytest.approx(r["equity_indirect"])
     assert r["gap"] == pytest.approx(0.0, abs=1e-6)
+
+def test_projection_from_lists_computes_fcff_and_indexes_years():
+    from dcf.projection import projection_from_lists
+    df = projection_from_lists(ebit=[100, 110], dna=[10, 11], capex=[20, 22],
+                               delta_nwc=[5, 6], tax_rate=0.25)
+    assert list(df.index) == [1, 2]
+    assert df.loc[1, "fcff"] == pytest.approx(60.0)   # 100*0.75 + 10 - 20 - 5
+
+def test_projection_from_lists_length_mismatch_raises():
+    from dcf.projection import projection_from_lists
+    import pytest as _pt
+    with _pt.raises(ValueError):
+        projection_from_lists(ebit=[100, 110], dna=[10], capex=[20, 22],
+                              delta_nwc=[5, 6], tax_rate=0.25)

@@ -86,3 +86,45 @@ def build_projection(a: Assumptions) -> pd.DataFrame:
         prev_revenue = revenue             # this year becomes next year's base
 
     return pd.DataFrame(rows).set_index("year")
+def projection_from_lists(ebit, dna, capex, delta_nwc, tax_rate, revenue=None):
+    """Build a projection table from your OWN per-year forecasts.
+
+    Instead of generating ten years from constant growth/margin assumptions,
+    supply the numbers yourself. ebit, dna, capex, delta_nwc are each a list with
+    one entry per projected year (any length). tax_rate is a scalar (same every
+    year) or a per-year list. revenue is optional — the exit multiple builds
+    EBITDA from ebit + dna, so revenue isn't required for valuation.
+
+    Returns the same shape build_projection() produces, so it drops straight into
+    enterprise_value(), ev_grid(), divergence_grid(), etc.
+    """
+    n = len(ebit)
+    for name, seq in {"dna": dna, "capex": capex, "delta_nwc": delta_nwc}.items():
+        if len(seq) != n:
+            raise ValueError(f"{name} has {len(seq)} entries, expected {n}")
+
+    if isinstance(tax_rate, (int, float)):
+        taxes = [float(tax_rate)] * n
+    else:
+        taxes = list(tax_rate)
+        if len(taxes) != n:
+            raise ValueError(f"tax_rate has {len(taxes)} entries, expected {n}")
+
+    if revenue is None:
+        revenue = [float("nan")] * n
+    elif len(revenue) != n:
+        raise ValueError(f"revenue has {len(revenue)} entries, expected {n}")
+
+    rows = []
+    for i in range(n):
+        f = fcff(ebit[i], taxes[i], dna[i], capex[i], delta_nwc[i])
+        rows.append({
+            "year": i + 1,
+            "revenue": revenue[i],
+            "ebit": ebit[i],
+            "dna": dna[i],
+            "capex": capex[i],
+            "delta_nwc": delta_nwc[i],
+            "fcff": f,
+        })
+    return pd.DataFrame(rows).set_index("year")
